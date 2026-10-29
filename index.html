@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=1920, height=1080">
+  <title>Hush Home</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="graphite">
+  <div id="stage">
+    <section id="who" class="screen">
+      <h1 class="who-title">Who's watching?</h1>
+      <div class="who-row">
+        <button class="person focusable" data-profile="p1">
+          <span class="avatar"></span>
+          <span class="person-name">User 1</span>
+        </button>
+        <button class="person focusable" data-profile="p2">
+          <span class="avatar"></span>
+          <span class="person-name">User 2</span>
+        </button>
+      </div>
+      <p class="who-hint" id="who-hint"></p>
+    </section>
+
+    <section id="home" class="screen" hidden>
+      <header class="top">
+        <div>
+          <div class="clock" id="clock">9:41</div>
+          <div class="date" id="date"></div>
+        </div>
+        <button class="me focusable" id="me" data-row="0">
+          <span class="me-avatar" id="me-avatar"></span>
+          <span class="me-name" id="me-name"></span>
+        </button>
+      </header>
+
+      <main>
+        <h2 class="greeting" id="greeting">Good evening</h2>
+        <div class="apps" id="apps"></div>
+        <div class="cards" id="cards"></div>
+      </main>
+
+      <footer class="bottom">
+        <span class="mark">hush</span>
+        <span class="hint">◀ ▶ move&nbsp;&nbsp;·&nbsp;&nbsp;OK open</span>
+      </footer>
+    </section>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

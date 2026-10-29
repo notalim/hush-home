@@ -1,0 +1,9 @@
+{
+  "name": "hush-home",
+  "version": "0.1.0",
+  "description": "Hush Home: a clean launcher for the living room TV, loaded through TizenBrew",
+  "packageType": "app",
+  "appName": "Hush Home",
+  "appPath": "index.html",
+  "keys": []
+}
