@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=1920, height=1080">
   <title>Hush Home</title>
-  <link rel="stylesheet" href="style.css">
+  <style>body { background: #0b0c0e; margin: 0; } #stage { visibility: hidden; }</style>
 </head>
 <body data-theme="graphite">
   <div id="stage">
@@ -47,6 +47,44 @@
       </footer>
     </section>
   </div>
-  <script src="app.js"></script>
+  <script>
+    // jsdelivr caches branch urls for hours, so pin the css and js to the newest commit;
+    // falls back to the copies next to this file when github can't be reached
+    (function () {
+      var base = 'https://cdn.jsdelivr.net/gh/notalim/hush-home';
+      var started = false;
+
+      function load(ref) {
+        if (started) return;
+        started = true;
+        var root = ref ? base + '@' + ref : '.';
+        var css = document.createElement('link');
+        css.rel = 'stylesheet';
+        css.href = root + '/style.css';
+        css.onload = show;
+        document.head.appendChild(css);
+        setTimeout(show, 1500);
+        var js = document.createElement('script');
+        js.src = root + '/app.js';
+        document.body.appendChild(js);
+      }
+
+      function show() {
+        document.getElementById('stage').style.visibility = 'visible';
+      }
+
+      if (location.port === '8899') return load(null);
+      var req = new XMLHttpRequest();
+      req.open('GET', 'https://api.github.com/repos/notalim/hush-home/commits/main', true);
+      req.setRequestHeader('Accept', 'application/vnd.github.sha');
+      req.timeout = 2500;
+      req.onload = function () {
+        var sha = (req.responseText || '').trim();
+        load(req.status === 200 && /^[0-9a-f]{40}$/.test(sha) ? sha : null);
+      };
+      req.onerror = req.ontimeout = function () { load(null); };
+      req.send();
+    })();
+  </script>
 </body>
 </html>
