@@ -234,22 +234,28 @@ function renderHome() {
   ps5.className = 'app focusable';
   ps5.id = 'ps5';
   ps5.innerHTML = `
-    <span class="app-icon ps5-icon">${ICONS.gamepad}<span class="ps5-word">PS5</span></span>
+    <span class="app-icon lift ps5-icon">${ICONS.gamepad}<span class="ps5-word">PS5</span></span>
     <span class="app-name">PlayStation<span class="badge" id="ps5-badge"></span></span>`;
-  ps5.addEventListener('click', () => post('/api/ps5'));
+  ps5.addEventListener('click', () => {
+    pressed(ps5);
+    playPS5();
+  });
   apps.appendChild(ps5);
 
   for (const app of APPS) {
     const el = document.createElement('button');
     el.className = 'app focusable';
     el.innerHTML = `
-      <span class="app-icon"><span class="fallback">${app.name}</span><img alt=""></span>
+      <span class="app-icon lift"><span class="fallback">${app.name}</span><img alt=""></span>
       <span class="app-name">${app.name}${app.badge ? `<span class="badge">${app.badge}</span>` : ''}</span>`;
     const img = el.querySelector('img');
     img.onload = () => el.querySelector('.fallback').remove();
     img.onerror = () => img.remove();
     img.src = app.icon;
-    el.addEventListener('click', () => launch(app));
+    el.addEventListener('click', () => {
+      pressed(el);
+      launch(app);
+    });
     apps.appendChild(el);
   }
   renderCards();
@@ -300,14 +306,74 @@ setInterval(tickClock, 10000);
 
 // MARK: launching
 
+function pressed(el) {
+  el.classList.add('pressed');
+  setTimeout(() => el.classList.remove('pressed'), 140);
+}
+
+let toastTimer = null;
+function toast(text) {
+  let el = document.querySelector('.toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'toast';
+    document.getElementById('stage').appendChild(el);
+  }
+  el.textContent = text;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.remove(), 2200);
+}
+
+// errors from the tv's browser are invisible otherwise; ship them to the mac's log
+function report(message) {
+  try {
+    new Image().src = `${HUSH}/api/log/${encodeURIComponent(message)}`;
+  } catch (e) {}
+}
+
 function launch(app) {
+  toast(`Opening ${app.name}`);
   if (app.module) {
     launchModule(app.module).then((ok) => {
+      report(`module ${app.module} via tizenbrew: ${ok}`);
       if (!ok) launchTizenBrewModule('npm', '@foxreis/tizentube');
     });
     return;
   }
-  fetch(`http://${TV}:8001/api/v2/applications/${app.appId}`, { method: 'POST', mode: 'no-cors' }).catch(() => {});
+  // 1: the tv's own app api, when the runtime hands it to module pages
+  if (window.tizen && tizen.application) {
+    try {
+      tizen.application.launch(
+        app.appId,
+        () => report(`tizen launch ok ${app.key}`),
+        (e) => {
+          report(`tizen launch failed ${app.key}: ${e.name} ${e.message}`);
+          launchElsewhere(app);
+        },
+      );
+      return;
+    } catch (e) {
+      report(`tizen launch threw ${app.key}: ${e.message}`);
+    }
+  }
+  launchElsewhere(app);
+}
+
+// 2: the mac relays to the tv's rest api (known to work); 3: hit that api directly
+function launchElsewhere(app) {
+  if (state.mac) {
+    post(`/api/launch/${app.appId}`);
+    return;
+  }
+  fetch(`http://${TV}:8001/api/v2/applications/${app.appId}`, { method: 'POST', mode: 'no-cors' })
+    .then(() => report(`direct rest sent ${app.key}`))
+    .catch((e) => report(`direct rest failed ${app.key}: ${e.message}`));
+}
+
+function playPS5() {
+  if (!state.mac) return toast('The Mac is offline, so Hush can’t switch inputs');
+  toast(state.mac.ps5 === 'on' ? 'Switching to PS5' : 'Waking the PS5');
+  post('/api/ps5');
 }
 
 // inside tizenbrew: ask its service for the module list, launch the match, then navigate, the same way tizenbrew's own ui does
@@ -383,6 +449,7 @@ async function loadNames() {
 
 paintNames();
 showWho();
+report(`boot origin=${location.origin} tizen=${!!window.tizen} appApi=${!!(window.tizen && tizen.application)} ua=${navigator.userAgent}`);
 loadNames();
 pollMac();
 setInterval(pollMac, 15000);
